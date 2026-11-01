@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoSistem Pintar - Lili & Ahmad (Versi Lengkap)</title>
+    
+    <!-- 1. Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <!-- 2. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        #map {
+            height: calc(100vh - 230px);
+            min-height: 480px;
+            border-radius: 12px;
+            z-index: 10;
+        }
+        /* Gaya Popup Leaflet dalam Mod Gelap */
+        .leaflet-popup-content-wrapper {
+            background-color: #1e293b !important;
+            color: #f1f5f9 !important;
+            border-radius: 10px !important;
+            border: 1px solid #334155 !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+        }
+        .leaflet-popup-tip {
+            background-color: #1e293b !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen overflow-x-hidden">
+
+    <!-- BUTANG TUKAR BAHASA GLOBAL (SUDUT KANAN ATAS) -->
+    <div class="fixed top-4 right-4 z-50 flex gap-1 bg-slate-800/90 backdrop-blur border border-slate-700 p-1 rounded-xl shadow-lg">
+        <button onclick="setBahasa('ms')" id="lang-ms" class="px-2.5 py-1 text-xs font-bold rounded-lg transition duration-200 bg-emerald-500 text-slate-950">
+            MY 🇲🇾
+        </button>
+        <button onclick="setBahasa('en')" id="lang-en" class="px-2.5 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition duration-200">
+            EN 🇬🇧
+        </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 1. SKRIN LOG MASUK (LOGIN SCREEN)          -->
+    <!-- ========================================== -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 bg-slate-950">
+        <div class="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-3xl mb-3">
+                    🌐
+                </div>
+                <h1 class="text-2xl font-bold text-emerald-400" data-i18n="login-title">Sistem Peta Pintar</h1>
+                <p class="text-xs text-slate-400 mt-1" data-i18n="login-subtitle">Projek Integrasi Sistem Lili & Ahmad (Versi Lokal)</p>
+            </div>
+
+            <form onsubmit="prosesLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-user-id">ID Pengguna</label>
+                    <input type="text" id="login-id" required placeholder="Masukkan ID (cth: Lili atau Ahmad)" 
+                           class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-password">Kata Laluan</label>
+                    <input type="password" id="login-pass" required placeholder="••••••••••" 
+                           class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+
+                <p id="login-ralat" class="text-xs text-red-400 hidden bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg text-center"></p>
+
+                <button type="submit" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg shadow-lg transition duration-200" data-i18n="btn-login">
+                    Log Masuk Sistem
+                </button>
+            </form>
+
+            <div class="mt-6 pt-4 border-t border-slate-700/60 text-xs text-slate-400 space-y-1">
+                <p class="font-semibold text-slate-300" data-i18n="lbl-default-info">💡 Maklumat Akses Lalai:</p>
+                <p>• Admin ID: <code class="text-emerald-400">Lili</code> / <code class="text-emerald-400">Ahmad</code></p>
+                <p>• Password: <code class="text-emerald-400">0123456789</code></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. SKRIN UTAMA APLIKASI (DASHBOARD)        -->
+    <!-- ========================================== -->
+    <div id="app-screen" class="hidden min-h-screen flex flex-col md:flex-row">
+
+        <!-- BAR SISI KIRI (SIDEBAR) -->
+        <aside class="w-full md:w-64 bg-slate-800 border-r border-slate-700 flex flex-col justify-between shrink-0">
+            <div>
+                <div class="p-5 border-b border-slate-700 flex items-center gap-3">
+                    <span class="text-2xl">🛰️</span>
+                    <div>
+                        <h2 class="font-bold text-emerald-400 leading-tight">GeoSistem</h2>
+                        <span class="text-[11px] text-slate-400" data-i18n="sidebar-sub">Versi 7.0: Lengkap</span>
+                    </div>
+                </div>
+
+                <div class="p-4 m-3 bg-slate-900/70 rounded-xl border border-slate-700/80">
+                    <p class="text-xs text-slate-400" data-i18n="lbl-logged-in-as">Log masuk sebagai:</p>
+                    <div class="flex items-center justify-between mt-1">
+                        <span id="info-nama-user" class="font-bold text-sm text-white truncate">Ahmad</span>
+                        <span id="info-role-user" class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            Admin
+                        </span>
+                    </div>
+                </div>
+
+                <nav class="px-3 space-y-1">
+                    <button onclick="bukaTab('map')" id="nav-map" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition bg-emerald-500 text-slate-950">
+                        <span>🗺️</span> <span data-i18n="tab-map-title">Peta & Penanda</span>
+                    </button>
+                    
+                    <button onclick="bukaTab('tetapan')" id="nav-tetapan" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition text-slate-300 hover:bg-slate-700/60">
+                        <span>⚙️</span> <span data-i18n="tab-settings-title">Tetapan</span>
+                    </button>
+
+                    <button onclick="bukaTab('user')" id="nav-user" class="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition text-slate-300 hover:bg-slate-700/60">
+                        <div class="flex items-center gap-3">
+                            <span>👥</span> <span data-i18n="tab-user-title">Pengurusan User</span>
+                        </div>
+                        <span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">Admin</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="p-4 border-t border-slate-700">
+                <button onclick="prosesLogout()" class="w-full py-2.5 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2">
+                    <span>🚪</span> <span data-i18n="btn-logout">Log Keluar</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- KANDUNGAN UTAMA -->
+        <main class="flex-grow p-4 md:p-6 overflow-y-auto bg-slate-900">
+
+            <!-- ========================================== -->
+            <!-- TAB 1: PETA, CARIAN, GPS & PENANDA LOKASI  -->
+            <!-- ========================================== -->
+            <section id="tab-map" class="space-y-4">
+                
+                <!-- Bar Kawalan Carian, GPS & Gaya Peta -->
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col xl:flex-row gap-3 items-center justify-between">
+                    
+                    <!-- Kiri: Borang Carian & Kawalan GPS -->
+                    <div class="w-full xl:w-auto flex-grow flex flex-col sm:flex-row gap-2 max-w-2xl">
+                        <form onsubmit="cariLokasi(event)" class="flex gap-2 flex-grow">
+                            <input type="text" id="input-carian" placeholder="Cari lokasi (cth: Langkawi, Melaka)..." 
+                                   class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                            <button type="submit" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg shadow transition shrink-0" data-i18n="btn-search">
+                                🔍 Cari
+                            </button>
+                        </form>
+
+                        <!-- Kawalan GPS (Satu Kali, Live Tracking & Padam) -->
+                        <div class="flex gap-1.5 shrink-0">
+                            <button type="button" onclick="jejakiLokasiSaya()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-emerald-400 border border-slate-600 rounded-lg shadow transition flex items-center gap-1 text-xs font-bold" title="Cari Lokasi Semasa">
+                                🎯 <span data-i18n="btn-gps">Lokasi Saya</span>
+                            </button>
+
+                            <button type="button" id="btn-live-gps" onclick="togolLiveTracking()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-blue-400 border border-slate-600 rounded-lg shadow transition flex items-center gap-1.5 text-xs font-bold" title="Penjejakan Berterusan">
+                                <span id="dot-live" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                <span id="label-live-gps" data-i18n="btn-live-start">Live GPS</span>
+                            </button>
+
+                            <button type="button" id="btn-padam-gps" onclick="padamMarkerGPS()" class="hidden px-2.5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg shadow transition flex items-center justify-center text-xs" title="Padam Penanda GPS">
+                                ❌
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Kanan: Penukar Gaya Terrain -->
+                    <div class="flex gap-2 w-full xl:w-auto justify-end shrink-0">
+                        <button onclick="tukarGaya('jalan')" id="btn-jalan" class="px-3.5 py-2 bg-emerald-500 text-slate-950 font-bold text-xs rounded-lg shadow transition" data-i18n="btn-street-map">
+                            Peta Utama (API)
+                        </button>
+                        <button onclick="tukarGaya('topografi')" id="btn-topografi" class="px-3.5 py-2 bg-slate-700 text-slate-300 font-bold text-xs rounded-lg hover:bg-slate-600 transition" data-i18n="btn-terrain-map">
+                            Rupa Bumi (Terrain)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mesej Status Carian / GPS -->
+                <p id="status-carian" class="text-xs text-emerald-400 px-1 hidden"></p>
+
+                <!-- Petunjuk Mesra Pengguna -->
+                <div class="bg-emerald-950/40 border border-emerald-500/20 px-4 py-2 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-300">
+                    <div class="flex items-center gap-2">
+                        <span>💡</span>
+                        <span data-i18n="tip-map"><strong>Petua:</strong> Klik pada peta untuk tambah penanda baru. Anda boleh mengeksport atau mengimport kembali fail GeoJSON!</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="badge-pembekal-aktif" class="px-2.5 py-0.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-full text-[10px]">Pembekal: OSM</span>
+                        <span id="jumlah-penanda-badge" class="px-2.5 py-0.5 bg-emerald-500/20 rounded-full font-bold">0 Disimpan</span>
+                    </div>
+                </div>
+
+                <!-- Kontena Grid: Peta (Kiri) & Senarai Penanda (Kanan) -->
+                <div class="grid grid-cols-1 xl:grid-cols-4 gap-4">
+                    
+                    <div class="xl:col-span-3 bg-slate-800 p-2 rounded-2xl border border-slate-700 shadow-lg relative">
+                        <div id="map"></div>
+                    </div>
+
+                    <div class="xl:col-span-1 bg-slate-800 border border-slate-700 rounded-2xl p-4 flex flex-col h-[480px] xl:h-auto shadow-lg">
+                        <div class="flex justify-between items-center mb-1 pb-1">
+                            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                                <span>📍</span> <span data-i18n="lbl-saved-markers">Penanda Disimpan</span>
+                            </h3>
+                            <button onclick="padamSemuaMarker()" class="text-[11px] text-slate-400 hover:text-red-400 transition" data-i18n="btn-clear-all">
+                                Kosongkan
+                            </button>
+                        </div>
+
+                        <!-- Butang Eksport & Import -->
+                        <div class="space-y-2 mb-3 mt-1">
+                            <div class="flex gap-1">
+                                <button onclick="eksportGeoJSON()" class="flex-1 py-1.5 px-2 bg-slate-700 hover:bg-slate-600 text-emerald-400 border border-slate-600 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1">
+                                    🌐 <span data-i18n="btn-export-geojson">Eksport GeoJSON</span>
+                                </button>
+                                <button onclick="eksportCSV()" class="flex-1 py-1.5 px-2 bg-slate-700 hover:bg-slate-600 text-emerald-400 border border-slate-600 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1">
+                                    📊 <span data-i18n="btn-export-csv">Eksport CSV</span>
+                                </button>
+                            </div>
+
+                            <div class="relative w-full">
+                                <input type="file" id="input-import-geojson" accept=".geojson,.json" onchange="importGeoJSON(event)" class="hidden">
+                                <label for="input-import-geojson" class="w-full py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg shadow transition cursor-pointer flex items-center justify-center gap-1.5">
+                                    📥 <span data-i18n="btn-import-geojson">Import Fail GeoJSON</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Senarai Penanda -->
+                        <div id="senarai-marker-ui" class="flex-grow overflow-y-auto space-y-2 pr-1 border-t border-slate-700 pt-2">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 2: TETAPAN (AKAUN & KONFIGURASI API)   -->
+            <!-- ========================================== -->
+            <section id="tab-tetapan" class="hidden max-w-2xl mx-auto mt-2 space-y-6">
+                
+                <!-- Kad 1: Tukar Kata Laluan Sendiri -->
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                    <h2 class="text-lg font-bold text-emerald-400 flex items-center gap-2 mb-1">
+                        <span>⚙️</span> <span data-i18n="settings-title">Tetapan Akaun Pengguna</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mb-5" data-i18n="settings-desc">Kemas kini kata laluan (password) untuk akaun anda.</p>
+
+                    <form onsubmit="tukarPasswordSendiri(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 uppercase mb-1" data-i18n="lbl-current-user">ID Pengguna Semasa</label>
+                            <input type="text" id="tetapan-id" disabled 
+                                   class="w-full px-4 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-slate-400 text-sm cursor-not-allowed">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-current-pass">Kata Laluan Semasa</label>
+                                <input type="password" id="pass-lama" required placeholder="••••••••"
+                                       class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-new-pass">Kata Laluan Baharu</label>
+                                <input type="password" id="pass-baru" required placeholder="••••••••"
+                                       class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-confirm-pass">Sahkan Baharu</label>
+                                <input type="password" id="pass-sahkan" required placeholder="••••••••"
+                                       class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                            </div>
+                        </div>
+
+                        <div id="notifikasi-tetapan" class="hidden p-3 rounded-lg text-xs font-medium"></div>
+
+                        <button type="submit" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg shadow transition" data-i18n="btn-save-pass">
+                            Simpan Kata Laluan Baharu
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Kad 2: Konfigurasi API Pembekal Peta (KHAS ADMIN) -->
+                <div id="kad-admin-map-api" class="hidden bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+                        <div>
+                            <h2 class="text-base font-bold text-emerald-400 flex items-center gap-2">
+                                <span>🛰️</span> <span data-i18n="api-config-title">Konfigurasi Pembekal API Peta</span>
+                            </h2>
+                            <p class="text-xs text-slate-400 mt-0.5" data-i18n="api-config-desc">Tukar URL Jubin (Tile URL) atau sambungkan Mapbox API Key anda.</p>
+                        </div>
+                        <span class="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2.5 py-1 rounded-full border border-amber-500/30">
+                            Admin Sahaja
+                        </span>
+                    </div>
+
+                    <!-- Pilihan Pratetap Pantas (Termasuk Mapbox!) -->
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-preset">Templat Pratetap (Presets Pantas)</label>
+                        <select id="pilihan-preset-map" onchange="pilihPresetMap(this.value)" class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-emerald-300 font-semibold text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <option value="osm">OpenStreetMap (Lalai - Percuma)</option>
+                            <option value="carto-dark">CartoDB Dark Matter (Tema Gelap Tanpa Key)</option>
+                            <option value="carto-voyager">CartoDB Voyager (Tema Terang Moden)</option>
+                            <option value="opentopo">OpenTopoMap (Kontur Rupa Bumi)</option>
+                            <option value="mapbox-streets">🌟 Mapbox Streets (Memerlukan Mapbox Token)</option>
+                            <option value="mapbox-dark">🌟 Mapbox Dark (Memerlukan Mapbox Token)</option>
+                            <option value="mapbox-satellite">🌟 Mapbox Satellite Streets (Memerlukan Mapbox Token)</option>
+                            <option value="custom">-- Masukkan URL / API Khas Sendiri --</option>
+                        </select>
+                    </div>
+
+                    <form onsubmit="simpanKonfigurasiAPI(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-provider-name">Nama Pembekal</label>
+                                <input type="text" id="api-provider-nama" required placeholder="Cth: Mapbox Dark" 
+                                       class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-api-key">Kunci API / Mapbox Access Token</label>
+                                <input type="password" id="api-key-token" placeholder="pk.eyJ1Ijoi..." 
+                                       class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-lg text-emerald-300 font-mono text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-tile-url">URL Templat Jubin Peta (Tile URL Template)</label>
+                            <input type="text" id="api-tile-url" required placeholder="https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={apiKey}" 
+                                   class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <p class="text-[10px] text-slate-400 mt-1">Gunakan <code>{z}</code>, <code>{x}</code>, <code>{y}</code> dan <code>{apiKey}</code> untuk suntikan token automatik.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-attribution">Kredit Hak Cipta (Attribution)</label>
+                            <input type="text" id="api-attribution" placeholder="&copy; Mapbox &copy; OpenStreetMap" 
+                                   class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </div>
+
+                        <div id="notifikasi-api-map" class="hidden p-3 rounded-lg text-xs font-medium"></div>
+
+                        <div class="flex flex-wrap gap-2 pt-2">
+                            <button type="submit" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg shadow transition" data-i18n="btn-save-api">
+                                💾 Simpan & Aktifkan Peta
+                            </button>
+                            <button type="button" onclick="setSemulaAPIPeta()" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold text-xs rounded-lg transition" data-i18n="btn-reset-api">
+                                Reset Lalai (OSM)
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 3: PENGURUSAN USER (KHAS ADMIN)        -->
+            <!-- ========================================== -->
+            <section id="tab-user" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl h-fit">
+                        <h3 class="text-base font-bold text-emerald-400 flex items-center gap-2 mb-1">
+                            <span>➕</span> <span data-i18n="user-add-title">Daftar Pengguna Baharu</span>
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-5" data-i18n="user-add-desc">Tambah pengguna dan tetapkan peranan (Role) mereka.</p>
+
+                        <form onsubmit="daftarUserBaharu(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-new-user-id">ID Pengguna Baharu</label>
+                                <input type="text" id="new-user-id" required placeholder="Cth: Kamal_Tech"
+                                       class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-set-pass">Set Kata Laluan</label>
+                                <input type="password" id="new-user-pass" required placeholder="••••••••"
+                                       class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1" data-i18n="lbl-select-role">Pilih Peranan (Role)</label>
+                                <select id="new-user-role" class="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                                    <option value="Admin">Admin (Akses Penuh)</option>
+                                    <option value="Technician">Technician (Juruteknik)</option>
+                                    <option value="Operator" selected>Operator (Pengendali)</option>
+                                </select>
+                            </div>
+
+                            <div id="notifikasi-user" class="hidden p-3 rounded-lg text-xs font-medium"></div>
+
+                            <button type="submit" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-lg shadow transition" data-i18n="btn-register-user">
+                                Daftar Pengguna
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <span>📋</span> <span data-i18n="user-list-title">Senarai Pengguna Sistem</span>
+                                </h3>
+                                <p class="text-xs text-slate-400" data-i18n="user-list-desc">Pengurusan peranan akaun sistem.</p>
+                            </div>
+                            <button onclick="resetKeDefault()" class="text-xs text-slate-400 hover:text-red-400 underline" data-i18n="btn-reset-default">
+                                Reset Data Lalai
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-700 text-[11px] uppercase text-slate-400">
+                                        <th class="py-3 px-4" data-i18n="th-user-id">ID Pengguna</th>
+                                        <th class="py-3 px-4" data-i18n="th-role">Peranan (Role)</th>
+                                        <th class="py-3 px-4" data-i18n="th-status">Status</th>
+                                        <th class="py-3 px-4 text-right" data-i18n="th-action">Tindakan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="jadual-senarai-user" class="divide-y divide-slate-700/60 text-sm">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- 3. Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- ========================================== -->
+    <!-- 4. LOGIK SISTEM INDUK (JAVASCRIPT)         -->
+    <!-- ========================================== -->
+    <script>
+        // --- A. KAMUS TERJEMAHAN DWI-BAHASA ---
+        const kamusBahasa = {
+            ms: {
+                "login-title": "Sistem Peta Pintar",
+                "login-subtitle": "Projek Integrasi Sistem Lili & Ahmad (Versi Lokal)",
+                "lbl-user-id": "ID Pengguna",
+                "lbl-password": "Kata Laluan",
+                "btn-login": "Log Masuk Sistem",
+                "lbl-default-info": "💡 Maklumat Akses Lalai:",
+                "sidebar-sub": "Versi 7.0: Lengkap",
+                "lbl-logged-in-as": "Log masuk sebagai:",
+                "tab-map-title": "Peta & Penanda",
+                "tab-settings-title": "Tetapan",
+                "tab-user-title": "Pengurusan User",
+                "btn-logout": "Log Keluar",
+                "btn-search": "🔍 Cari",
+                "btn-gps": "Lokasi Saya",
+                "btn-live-start": "Live GPS",
+                "btn-live-stop": "Henti Live",
+                "btn-street-map": "Peta Utama (API)",
+                "btn-terrain-map": "Rupa Bumi (Terrain)",
+                "tip-map": "<strong>Petua:</strong> Klik pada peta untuk tambah penanda baru. Anda boleh mengeksport atau mengimport kembali fail GeoJSON!",
+                "lbl-saved-markers": "Penanda Disimpan",
+                "btn-clear-all": "Kosongkan",
+                "btn-export-geojson": "Eksport GeoJSON",
+                "btn-export-csv": "Eksport CSV",
+                "btn-import-geojson": "Import Fail GeoJSON",
+                "placeholder-search": "Cari lokasi (cth: Langkawi, Melaka)...",
+                "settings-title": "Tetapan Akaun Pengguna",
+                "settings-desc": "Kemas kini kata laluan (password) untuk akaun anda.",
+                "lbl-current-user": "ID Pengguna Semasa",
+                "lbl-current-pass": "Kata Laluan Semasa",
+                "lbl-new-pass": "Kata Laluan Baharu",
+                "lbl-confirm-pass": "Sahkan Baharu",
+                "btn-save-pass": "Simpan Kata Laluan Baharu",
+                "api-config-title": "Konfigurasi Pembekal API Peta",
+                "api-config-desc": "Tukar URL Jubin (Tile URL) atau sambungkan Mapbox API Key anda.",
+                "lbl-preset": "Templat Pratetap (Presets Pantas)",
+                "lbl-provider-name": "Nama Pembekal",
+                "lbl-api-key": "Kunci API / Mapbox Access Token",
+                "lbl-tile-url": "URL Templat Jubin Peta (Tile URL Template)",
+                "lbl-attribution": "Kredit Hak Cipta (Attribution)",
+                "btn-save-api": "💾 Simpan & Aktifkan Peta",
+                "btn-reset-api": "Reset Lalai (OSM)",
+                "user-add-title": "Daftar Pengguna Baharu",
+                "user-add-desc": "Tambah pengguna dan tetapkan peranan (Role) mereka.",
+                "lbl-new-user-id": "ID Pengguna Baharu",
+                "lbl-set-pass": "Set Kata Laluan",
+                "lbl-select-role": "Pilih Peranan (Role)",
+                "btn-register-user": "Daftar Pengguna",
+                "user-list-title": "Senarai Pengguna Sistem",
+                "user-list-desc": "Pengurusan peranan akaun sistem.",
+                "btn-reset-default": "Reset Data Lalai",
+                "th-user-id": "ID Pengguna",
+                "th-role": "Peranan (Role)",
+                "th-status": "Status",
+                "th-action": "Tindakan",
+                "gps-searching": "⏳ Menghubungkan ke satelit GPS...",
+                "gps-success": "✅ Lokasi semasa anda ditemui!",
+                "gps-error": "❌ Gagal mengesan GPS. Sila benarkan akses lokasi pada pelayar.",
+                "gps-cleared": "🧹 Penanda lokasi GPS telah dibersihkan."
+            },
+            en: {
+                "login-title": "Smart Map System",
+                "login-subtitle": "Lili & Ahmad System Integration Project (Local Version)",
+                "lbl-user-id": "User ID",
+                "lbl-password": "Password",
+                "btn-login": "System Login",
+                "lbl-default-info": "💡 Default Credentials Info:",
+                "sidebar-sub": "Version 7.0: Complete",
+                "lbl-logged-in-as": "Logged in as:",
+                "tab-map-title": "Map & Markers",
+                "tab-settings-title": "Settings",
+                "tab-user-title": "User Management",
+                "btn-logout": "Logout",
+                "btn-search": "🔍 Search",
+                "btn-gps": "My Location",
+                "btn-live-start": "Live GPS",
+                "btn-live-stop": "Stop Live",
+                "btn-street-map": "Primary Map (API)",
+                "btn-terrain-map": "Terrain Map",
+                "tip-map": "<strong>Tip:</strong> Click on the map to add a new marker. You can export or import GeoJSON files!",
+                "lbl-saved-markers": "Saved Markers",
+                "btn-clear-all": "Clear All",
+                "btn-export-geojson": "Export GeoJSON",
+                "btn-export-csv": "Export CSV",
+                "btn-import-geojson": "Import GeoJSON File",
+                "placeholder-search": "Search location (e.g., Kuala Lumpur, London)...",
+                "settings-title": "User Account Settings",
+                "settings-desc": "Update the password for your account.",
+                "lbl-current-user": "Current User ID",
+                "lbl-current-pass": "Current Password",
+                "lbl-new-pass": "New Password",
+                "lbl-confirm-pass": "Confirm New",
+                "btn-save-pass": "Save New Password",
+                "api-config-title": "Map API Provider Configuration",
+                "api-config-desc": "Change Tile URL or connect your Mapbox API Key.",
+                "lbl-preset": "Quick Preset Templates",
+                "lbl-provider-name": "Provider Name",
+                "lbl-api-key": "API Key / Mapbox Access Token",
+                "lbl-tile-url": "Map Tile URL Template",
+                "lbl-attribution": "Copyright Attribution",
+                "btn-save-api": "💾 Save & Activate Map",
+                "btn-reset-api": "Reset Default (OSM)",
+                "user-add-title": "Register New User",
+                "user-add-desc": "Add a new user and assign their roles.",
+                "lbl-new-user-id": "New User ID",
+                "lbl-set-pass": "Set Password",
+                "lbl-select-role": "Select Role",
+                "btn-register-user": "Register User",
+                "user-list-title": "System Users List",
+                "user-list-desc": "Manage roles of system accounts.",
+                "btn-reset-default": "Reset Default Data",
+                "th-user-id": "User ID",
+                "th-role": "Role",
+                "th-status": "Status",
+                "th-action": "Action",
+                "gps-searching": "⏳ Connecting to GPS satellites...",
+                "gps-success": "✅ Your current location found!",
+                "gps-error": "❌ Failed to detect GPS. Please allow browser location access.",
+                "gps-cleared": "🧹 GPS location marker has been cleared."
+            }
+        };
+
+        let bahasaSemasa = localStorage.getItem('geosistem_language') || 'ms';
+
+        function setBahasa(kod) {
+            bahasaSemasa = kod;
+            localStorage.setItem('geosistem_language', kod);
+
+            document.getElementById('lang-ms').className = kod === 'ms'
+                ? "px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500 text-slate-950 transition"
+                : "px-2.5 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+            document.getElementById('lang-en').className = kod === 'en'
+                ? "px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-500 text-slate-950 transition"
+                : "px-2.5 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const k = el.getAttribute('data-i18n');
+                if (kamusBahasa[kod][k]) {
+                    if (el.innerHTML.includes('<strong>')) {
+                        el.innerHTML = kamusBahasa[kod][k];
+                    } else {
+                        el.textContent = kamusBahasa[kod][k];
+                    }
+                }
+            });
+
+            document.getElementById('input-carian').placeholder = kamusBahasa[kod]['placeholder-search'];
+            
+            // Kemas kini label butang live tracking mengikut status semasa
+            const lblLive = document.getElementById('label-live-gps');
+            if (lblLive) {
+                lblLive.textContent = sedangMenjejak ? kamusBahasa[kod]['btn-live-stop'] : kamusBahasa[kod]['btn-live-start'];
+            }
+
+            if (penggunaSemasa && penggunaSemasa.role === 'Admin') muatJadualUser();
+            if (map) lukisSemuaMarkerDariStorage();
+        }
+
+        // --- B. PENGURUSAN LOCALSTORAGE ---
+        const KUNCI_STORAGE_USER = 'geosistem_users_db';
+        const KUNCI_STORAGE_MARKER = 'geosistem_markers_db';
+        const KUNCI_STORAGE_TILE = 'geosistem_tile_config';
+
+        const penggunaLalai = [
+            { id: 'Lili', pass: '0123456789', role: 'Admin', isDefault: true },
+            { id: 'Ahmad', pass: '0123456789', role: 'Admin', isDefault: true }
+        ];
+
+        const tileConfigLalai = {
+            nama: "OpenStreetMap Standard",
+            url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            apiKey: "",
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        };
+
+        function dapatkanSenaraiUser() {
+            const data = localStorage.getItem(KUNCI_STORAGE_USER);
+            if (!data) {
+                localStorage.setItem(KUNCI_STORAGE_USER, JSON.stringify(penggunaLalai));
+                return penggunaLalai;
+            }
+            return JSON.parse(data);
+        }
+
+        function simpanSenaraiUser(senarai) {
+            localStorage.setItem(KUNCI_STORAGE_USER, JSON.stringify(senarai));
+        }
+
+        function dapatkanSenaraiMarker() {
+            const data = localStorage.getItem(KUNCI_STORAGE_MARKER);
+            return data ? JSON.parse(data) : [];
+        }
+
+        function simpanSenaraiMarker(senarai) {
+            localStorage.setItem(KUNCI_STORAGE_MARKER, JSON.stringify(senarai));
+            kemasKiniUIPenanda();
+        }
+
+        function dapatkanTileConfig() {
+            const data = localStorage.getItem(KUNCI_STORAGE_TILE);
+            return data ? JSON.parse(data) : tileConfigLalai;
+        }
+
+        let penggunaSemasa = null;
+
+        // --- C. SISTEM LOG MASUK & LOG KELUAR ---
+        function prosesLogin(event) {
+            event.preventDefault();
+            const inputId = document.getElementById('login-id').value.trim();
+            const inputPass = document.getElementById('login-pass').value;
+            const kotakRalat = document.getElementById('login-ralat');
+
+            const senaraiUser = dapatkanSenaraiUser();
+            const userDijumpai = senaraiUser.find(
+                u => u.id.toLowerCase() === inputId.toLowerCase() && u.pass === inputPass
+            );
+
+            if (userDijumpai) {
+                penggunaSemasa = userDijumpai;
+                kotakRalat.classList.add('hidden');
+                document.getElementById('login-id').value = '';
+                document.getElementById('login-pass').value = '';
+                masukKeAplikasi();
+            } else {
+                kotakRalat.textContent = bahasaSemasa === 'ms' 
+                    ? "❌ ID Pengguna atau Kata Laluan tidak sah!" 
+                    : "❌ Invalid User ID or Password!";
+                kotakRalat.classList.remove('hidden');
+            }
+        }
+
+        function masukKeAplikasi() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+
+            document.getElementById('info-nama-user').textContent = penggunaSemasa.id;
+            document.getElementById('info-role-user').textContent = penggunaSemasa.role;
+            document.getElementById('tetapan-id').value = `${penggunaSemasa.id} (${penggunaSemasa.role})`;
+
+            const butangTabUser = document.getElementById('nav-user');
+            if (penggunaSemasa.role === 'Admin') {
+                butangTabUser.classList.remove('hidden');
+                muatJadualUser();
+            } else {
+                butangTabUser.classList.add('hidden');
+            }
+
+            muatTetapanAPIPeta();
+            bukaTab('map');
+            initPeta();
+        }
+
+        function prosesLogout() {
+            if (sedangMenjejak) hentiLiveTracking();
+            penggunaSemasa = null;
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
+
+        function bukaTab(namaTab) {
+            if (namaTab === 'user' && penggunaSemasa.role !== 'Admin') {
+                alert("Akses Ditolak: Hanya Admin dibenarkan.");
+                return;
+            }
+
+            document.getElementById('tab-map').classList.add('hidden');
+            document.getElementById('tab-tetapan').classList.add('hidden');
+            document.getElementById('tab-user').classList.add('hidden');
+
+            ['nav-map', 'nav-tetapan', 'nav-user'].forEach(id => {
+                document.getElementById(id).className = "w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition text-slate-300 hover:bg-slate-700/60";
+            });
+
+            document.getElementById(`tab-${namaTab}`).classList.remove('hidden');
+            document.getElementById(`nav-${namaTab}`).className = "w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition bg-emerald-500 text-slate-950 shadow";
+
+            if (namaTab === 'map' && map) {
+                setTimeout(() => map.invalidateSize(), 150);
+            }
+        }
+
+        // --- D. TETAPAN PASSWORD & KONFIGURASI API PETA ---
+        function tukarPasswordSendiri(event) {
+            event.preventDefault();
+            const passLama = document.getElementById('pass-lama').value;
+            const passBaru = document.getElementById('pass-baru').value;
+            const passSahkan = document.getElementById('pass-sahkan').value;
+            const notifikasi = document.getElementById('notifikasi-tetapan');
+
+            if (passLama !== penggunaSemasa.pass) {
+                paparNotifikasi(notifikasi, bahasaSemasa === 'ms' ? "❌ Kata laluan semasa tidak tepat!" : "❌ Incorrect current password!", false);
+                return;
+            }
+            if (passBaru.length < 4) {
+                paparNotifikasi(notifikasi, bahasaSemasa === 'ms' ? "⚠️ Kata laluan minimum 4 aksara." : "⚠️ Minimum 4 characters required.", false);
+                return;
+            }
+            if (passBaru !== passSahkan) {
+                paparNotifikasi(notifikasi, bahasaSemasa === 'ms' ? "❌ Pengesahan kata laluan tidak sepadan!" : "❌ Passwords do not match!", false);
+                return;
+            }
+
+            const senaraiUser = dapatkanSenaraiUser();
+            const idx = senaraiUser.findIndex(u => u.id === penggunaSemasa.id);
+            if (idx !== -1) {
+                senaraiUser[idx].pass = passBaru;
+                simpanSenaraiUser(senaraiUser);
+                penggunaSemasa.pass = passBaru;
+                document.getElementById('pass-lama').value = '';
+                document.getElementById('pass-baru').value = '';
+                document.getElementById('pass-sahkan').value = '';
+                paparNotifikasi(notifikasi, bahasaSemasa === 'ms' ? "✅ Kata laluan dikemas kini!" : "✅ Password updated!", true);
+            }
+        }
+
+        // Pratetap Pembekal Peta (Termasuk Mapbox!)
+        const presetsPeta = {
+            "osm": {
+                nama: "OpenStreetMap Standard",
+                url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                attribution: '&copy; OpenStreetMap contributors'
+            },
+            "carto-dark": {
+                nama: "CartoDB Dark Matter",
+                url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+                attribution: '&copy; CARTO'
+            },
+            "carto-voyager": {
+                nama: "CartoDB Voyager",
+                url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+                attribution: '&copy; CARTO'
+            },
+            "opentopo": {
+                nama: "OpenTopoMap Terrain",
+                url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+                attribution: '&copy; OpenTopoMap'
+            },
+            "mapbox-streets": {
+                nama: "Mapbox Streets",
+                url: "https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token={apiKey}",
+                attribution: '&copy; Mapbox &copy; OpenStreetMap'
+            },
+            "mapbox-dark": {
+                nama: "Mapbox Dark",
+                url: "https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={apiKey}",
+                attribution: '&copy; Mapbox &copy; OpenStreetMap'
+            },
+            "mapbox-satellite": {
+                nama: "Mapbox Satellite Streets",
+                url: "https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token={apiKey}",
+                attribution: '&copy; Mapbox &copy; OpenStreetMap'
+            }
+        };
+
+        function pilihPresetMap(kod) {
+            if (kod === 'custom') return;
+            const p = presetsPeta[kod];
+            if (p) {
+                document.getElementById('api-provider-nama').value = p.nama;
+                document.getElementById('api-tile-url').value = p.url;
+                document.getElementById('api-attribution').value = p.attribution;
+            }
+        }
+
+        function muatTetapanAPIPeta() {
+            const kadAdmin = document.getElementById('kad-admin-map-api');
+            if (penggunaSemasa && penggunaSemasa.role === 'Admin') {
+                kadAdmin.classList.remove('hidden');
+                const config = dapatkanTileConfig();
+                document.getElementById('api-provider-nama').value = config.nama;
+                document.getElementById('api-tile-url').value = config.url;
+                document.getElementById('api-key-token').value = config.apiKey || "";
+                document.getElementById('api-attribution').value = config.attribution;
+            } else {
+                kadAdmin.classList.add('hidden');
+            }
+        }
+
+        function simpanKonfigurasiAPI(event) {
+            event.preventDefault();
+            if (penggunaSemasa.role !== 'Admin') return;
+
+            const notifikasi = document.getElementById('notifikasi-api-map');
+            const nama = document.getElementById('api-provider-nama').value.trim();
+            const url = document.getElementById('api-tile-url').value.trim();
+            const apiKey = document.getElementById('api-key-token').value.trim();
+            const attribution = document.getElementById('api-attribution').value.trim();
+
+            if (!url.includes('{z}') || !url.includes('{x}') || !url.includes('{y}')) {
+                paparNotifikasi(notifikasi, "❌ URL mesti mengandungi parameter {z}, {x}, dan {y}.", false);
+                return;
+            }
+
+            if (url.includes('mapbox.com') && !apiKey) {
+                paparNotifikasi(notifikasi, "⚠️ Sila masukkan Mapbox Access Token (pk.eyJ...) anda!", false);
+                return;
+            }
+
+            const konfigurasiBaru = { nama, url, apiKey, attribution: attribution || '&copy; Custom Map' };
+            localStorage.setItem(KUNCI_STORAGE_TILE, JSON.stringify(konfigurasiBaru));
+            gunakanLapisanPetaTerkini();
+
+            paparNotifikasi(notifikasi, `✅ Pembekal peta berjaya ditukar kepada '${nama}'!`, true);
+        }
+
+        function setSemulaAPIPeta() {
+            if (confirm("Reset semula pembekal peta kepada OpenStreetMap lalai?")) {
+                localStorage.setItem(KUNCI_STORAGE_TILE, JSON.stringify(tileConfigLalai));
+                muatTetapanAPIPeta();
+                gunakanLapisanPetaTerkini();
+            }
+        }
+
+        function gunakanLapisanPetaTerkini() {
+            if (!map) return;
+            const config = dapatkanTileConfig();
+            let urlAkhir = config.url;
+
+            if (config.apiKey) {
+                if (urlAkhir.includes('{apiKey}')) {
+                    urlAkhir = urlAkhir.replace('{apiKey}', config.apiKey);
+                } else if (urlAkhir.includes('{accessToken}')) {
+                    urlAkhir = urlAkhir.replace('{accessToken}', config.apiKey);
+                } else if (!urlAkhir.includes('token=') && !urlAkhir.includes('key=')) {
+                    urlAkhir += (urlAkhir.includes('?') ? '&' : '?') + `access_token=${config.apiKey}`;
+                }
+            }
+
+            if (gayaJalanan && map.hasLayer(gayaJalanan)) {
+                map.removeLayer(gayaJalanan);
+            }
+
+            // Konfigurasi pintar: Mapbox menggunakan jubin 512px dengan zoomOffset -1
+            const opsiTile = {
+                maxZoom: 19,
+                attribution: config.attribution
+            };
+
+            if (urlAkhir.includes('api.mapbox.com/styles/v1')) {
+                opsiTile.tileSize = 512;
+                opsiTile.zoomOffset = -1;
+            }
+
+            gayaJalanan = L.tileLayer(urlAkhir, opsiTile);
+            gayaJalanan.addTo(map);
+
+            // Kemas kini lencana nama pembekal di atas peta
+            const badge = document.getElementById('badge-pembekal-aktif');
+            if (badge) badge.textContent = `API: ${config.nama}`;
+        }
+
+        // --- E. PENGURUSAN PENGGUNA (ADMIN) ---
+        function daftarUserBaharu(event) {
+            event.preventDefault();
+            const idBaharu = document.getElementById('new-user-id').value.trim();
+            const passBaharu = document.getElementById('new-user-pass').value;
+            const roleBaharu = document.getElementById('new-user-role').value;
+            const notifikasi = document.getElementById('notifikasi-user');
+
+            const senaraiUser = dapatkanSenaraiUser();
+            if (senaraiUser.some(u => u.id.toLowerCase() === idBaharu.toLowerCase())) {
+                paparNotifikasi(notifikasi, `❌ ID '${idBaharu}' sudah wujud!`, false);
+                return;
+            }
+
+            senaraiUser.push({ id: idBaharu, pass: passBaharu, role: roleBaharu, isDefault: false });
+            simpanSenaraiUser(senaraiUser);
+            muatJadualUser();
+
+            document.getElementById('new-user-id').value = '';
+            document.getElementById('new-user-pass').value = '';
+            paparNotifikasi(notifikasi, `✅ Pengguna '${idBaharu}' berjaya didaftarkan!`, true);
+        }
+
+        function muatJadualUser() {
+            const tbody = document.getElementById('jadual-senarai-user');
+            const senaraiUser = dapatkanSenaraiUser();
+            tbody.innerHTML = '';
+
+            senaraiUser.forEach((u, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-700/30 transition";
+
+                let kolumRole = u.isDefault 
+                    ? `<span class="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold rounded-full border border-emerald-500/30">Admin Utama</span>`
+                    : `<select onchange="kemaskiniRoleUser(${index}, this.value)" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1">
+                            <option value="Admin" ${u.role === 'Admin' ? 'selected' : ''}>Admin</option>
+                            <option value="Technician" ${u.role === 'Technician' ? 'selected' : ''}>Technician</option>
+                            <option value="Operator" ${u.role === 'Operator' ? 'selected' : ''}>Operator</option>
+                        </select>`;
+
+                let butangTindakan = u.isDefault 
+                    ? `<span class="text-xs text-slate-500 italic">Kekal</span>`
+                    : `<button onclick="padamUser(${index})" class="text-xs text-red-400 hover:text-red-300 font-semibold px-2 py-1 rounded bg-red-500/10 border border-red-500/20">Padam</button>`;
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-semibold text-white">${u.id}</td>
+                    <td class="py-3 px-4">${kolumRole}</td>
+                    <td class="py-3 px-4 text-xs text-slate-400">${u.isDefault ? 'Default Admin' : 'Berdaftar'}</td>
+                    <td class="py-3 px-4 text-right">${butangTindakan}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function kemaskiniRoleUser(idx, roleBaru) {
+            const senarai = dapatkanSenaraiUser();
+            senarai[idx].role = roleBaru;
+            simpanSenaraiUser(senarai);
+        }
+
+        function padamUser(idx) {
+            const senarai = dapatkanSenaraiUser();
+            if (confirm(`Padam pengguna '${senarai[idx].id}'?`)) {
+                senarai.splice(idx, 1);
+                simpanSenaraiUser(senarai);
+                muatJadualUser();
+            }
+        }
+
+        function resetKeDefault() {
+            if (confirm("Reset semula semua pengguna kepada Lili & Ahmad sahaja?")) {
+                localStorage.setItem(KUNCI_STORAGE_USER, JSON.stringify(penggunaLalai));
+                muatJadualUser();
+            }
+        }
+
+        function paparNotifikasi(el, msg, ok) {
+            el.textContent = msg;
+            el.className = ok 
+                ? "p-3 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 block"
+                : "p-3 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 block";
+            setTimeout(() => el.classList.add('hidden'), 4000);
+        }
+
+        // --- F. PETA, PENANDA (MARKERS) & GPS ---
+        let map = null;
+        let gayaJalanan = null;
+        let gayaTopografi = null;
+        let penandaCarian = null;
+        let kumpulanMarkerMap = [];
+        let penandaGPS = null;
+        let bulatanKetepatan = null;
+        let idWatchGPS = null;
+        let sedangMenjejak = false;
+
+        function initPeta() {
+            if (map !== null) {
+                setTimeout(() => map.invalidateSize(), 150);
+                return;
+            }
+
+            const koordinatMula = [3.1390, 101.6869]; // Kuala Lumpur
+            map = L.map('map').setView(koordinatMula, 12);
+
+            gayaTopografi = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                maxZoom: 17,
+                attribution: '&copy; OpenTopoMap'
+            });
+
+            gunakanLapisanPetaTerkini();
+
+            map.on('click', function(e) {
+                bukaBorangSimpanMarker(e.latlng.lat, e.latlng.lng);
+            });
+
+            lukisSemuaMarkerDariStorage();
+        }
+
+        // 1. Fungsi GPS Satu Kali
+        function jejakiLokasiSaya() {
+            const statusText = document.getElementById('status-carian');
+            if (!navigator.geolocation) {
+                alert("⚠️ Pelayar tidak menyokong GPS.");
+                return;
+            }
+
+            statusText.textContent = kamusBahasa[bahasaSemasa]["gps-searching"];
+            statusText.className = "text-xs text-emerald-400 px-1 block";
+
+            navigator.geolocation.getCurrentPosition(
+                function(posisi) {
+                    kemasKiniMarkerGPSDiPeta(posisi.coords.latitude, posisi.coords.longitude, posisi.coords.accuracy, true);
+                    statusText.textContent = kamusBahasa[bahasaSemasa]["gps-success"];
+                    setTimeout(() => statusText.classList.add('hidden'), 4000);
+                },
+                function() {
+                    statusText.textContent = kamusBahasa[bahasaSemasa]["gps-error"];
+                    statusText.className = "text-xs text-red-400 px-1 block";
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        // 2. Fungsi Live Tracking Berterusan
+        function togolLiveTracking() {
+            if (sedangMenjejak) {
+                hentiLiveTracking();
+            } else {
+                mulaLiveTracking();
+            }
+        }
+
+        function mulaLiveTracking() {
+            const statusText = document.getElementById('status-carian');
+            if (!navigator.geolocation) return;
+
+            sedangMenjejak = true;
+            document.getElementById('label-live-gps').textContent = kamusBahasa[bahasaSemasa]['btn-live-stop'];
+            document.getElementById('dot-live').className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+
+            statusText.textContent = "📡 Live GPS diaktifkan...";
+            statusText.className = "text-xs text-emerald-400 px-1 block";
+
+            let kaliPertama = true;
+            idWatchGPS = navigator.geolocation.watchPosition(
+                function(posisi) {
+                    kemasKiniMarkerGPSDiPeta(posisi.coords.latitude, posisi.coords.longitude, posisi.coords.accuracy, kaliPertama);
+                    kaliPertama = false;
+                },
+                function() {
+                    statusText.textContent = kamusBahasa[bahasaSemasa]["gps-error"];
+                    statusText.className = "text-xs text-red-400 px-1 block";
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function hentiLiveTracking() {
+            if (idWatchGPS !== null) {
+                navigator.geolocation.clearWatch(idWatchGPS);
+                idWatchGPS = null;
+            }
+            sedangMenjejak = false;
+            document.getElementById('label-live-gps').textContent = kamusBahasa[bahasaSemasa]['btn-live-start'];
+            document.getElementById('dot-live').className = "w-2 h-2 rounded-full bg-slate-400";
+        }
+
+        // Helper melukis/mengemas kini objek GPS di atas peta
+        function kemasKiniMarkerGPSDiPeta(lat, lon, ketepatan, fokusFly) {
+            if (!penandaGPS) {
+                const ikonGPSKhas = L.divIcon({
+                    className: 'relative flex items-center justify-center w-5 h-5',
+                    html: `
+                        <span class="absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75 animate-ping"></span>
+                        <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-blue-500 border border-white"></span>
+                    `
+                });
+                penandaGPS = L.marker([lat, lon], { icon: ikonGPSKhas }).addTo(map);
+                bulatanKetepatan = L.circle([lat, lon], {
+                    color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.15, radius: ketepatan
+                }).addTo(map);
+            } else {
+                penandaGPS.setLatLng([lat, lon]);
+                bulatanKetepatan.setLatLng([lat, lon]).setRadius(ketepatan);
+            }
+
+            penandaGPS.bindPopup(`<b>Kedudukan GPS Anda</b><br>Ralat: ±${ketepatan.toFixed(1)}m`).openPopup();
+            document.getElementById('btn-padam-gps').classList.remove('hidden');
+
+            if (fokusFly) {
+                map.flyTo([lat, lon], 16, { animate: true, duration: 1.5 });
+            } else {
+                map.panTo([lat, lon], { animate: true });
+            }
+        }
+
+        function padamMarkerGPS() {
+            if (sedangMenjejak) hentiLiveTracking();
+            if (penandaGPS) { map.removeLayer(penandaGPS); penandaGPS = null; }
+            if (bulatanKetepatan) { map.removeLayer(bulatanKetepatan); bulatanKetepatan = null; }
+            document.getElementById('btn-padam-gps').classList.add('hidden');
+
+            const statusText = document.getElementById('status-carian');
+            statusText.textContent = kamusBahasa[bahasaSemasa]["gps-cleared"];
+            statusText.className = "text-xs text-emerald-400 px-1 block";
+            setTimeout(() => statusText.classList.add('hidden'), 3000);
+        }
+
+        // --- G. PENANDA LOKASI TERSIMPAN (MARKERS) ---
+        function bukaBorangSimpanMarker(lat, lng) {
+            const popupTitle = bahasaSemasa === 'ms' ? "📍 Simpan Penanda Lokasi" : "📍 Save Map Marker";
+            const phNama = bahasaSemasa === 'ms' ? "Nama Lokasi / Aset" : "Location / Asset Name";
+            const phCatatan = bahasaSemasa === 'ms' ? "Catatan (cth: Stesen Sensor)" : "Notes (e.g., Sensor Station)";
+            const btnTxt = bahasaSemasa === 'ms' ? "💾 Simpan Penanda" : "💾 Save Marker";
+
+            const popupContent = `
+                <div class="p-1 min-w-[200px]">
+                    <h4 class="font-bold text-emerald-400 text-xs mb-1">${popupTitle}</h4>
+                    <p class="text-[10px] text-slate-400 mb-2">Lat: ${lat.toFixed(4)}, Lon: ${lng.toFixed(4)}</p>
+                    <div class="space-y-2">
+                        <input type="text" id="popup-nama" placeholder="${phNama}" 
+                               class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-100 text-xs focus:outline-none">
+                        <input type="text" id="popup-catatan" placeholder="${phCatatan}" 
+                               class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded text-slate-100 text-xs focus:outline-none">
+                        <button onclick="laksanaSimpanMarker(${lat}, ${lng})" 
+                                class="w-full py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded transition shadow">
+                            ${btnTxt}
+                        </button>
+                    </div>
+                </div>
+            `;
+            L.popup().setLatLng([lat, lng]).setContent(popupContent).openOn(map);
+        }
+
+        window.laksanaSimpanMarker = function(lat, lng) {
+            const nama = document.getElementById('popup-nama').value.trim();
+            const catatan = document.getElementById('popup-catatan').value.trim();
+            if (!nama) { alert("Sila masukkan nama lokasi!"); return; }
+
+            const senaraiMarker = dapatkanSenaraiMarker();
+            senaraiMarker.push({
+                id: 'm_' + Date.now(),
+                nama: nama,
+                catatan: catatan || 'Tiada catatan',
+                lat: lat,
+                lng: lng,
+                diciptaOleh: penggunaSemasa ? penggunaSemasa.id : 'Admin'
+            });
+
+            simpanSenaraiMarker(senaraiMarker);
+            lukisSemuaMarkerDariStorage();
+            map.closePopup();
+        };
+
+        function lukisSemuaMarkerDariStorage() {
+            kumpulanMarkerMap.forEach(m => map.removeLayer(m));
+            kumpulanMarkerMap = [];
+
+            const senaraiMarker = dapatkanSenaraiMarker();
+            senaraiMarker.forEach(m => {
+                const markerObj = L.marker([m.lat, m.lng]).addTo(map);
+                const infoPopup = `
+                    <div class="p-1 min-w-[190px]">
+                        <h4 class="font-bold text-emerald-400 text-sm">${m.nama}</h4>
+                        <p class="text-xs text-slate-300 mt-0.5">${m.catatan}</p>
+                        <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] text-slate-400 flex justify-between items-center">
+                            <span>Oleh: <strong>${m.diciptaOleh}</strong></span>
+                            <button onclick="padamSatuMarker('${m.id}')" class="text-red-400 hover:text-red-300 font-semibold underline">Padam</button>
+                        </div>
+                    </div>
+                `;
+                markerObj.bindPopup(infoPopup);
+                markerObj._customId = m.id;
+                kumpulanMarkerMap.push(markerObj);
+            });
+            kemasKiniUIPenanda();
+        }
+
+        function kemasKiniUIPenanda() {
+            const bekasUI = document.getElementById('senarai-marker-ui');
+            const badgeJumlah = document.getElementById('jumlah-penanda-badge');
+            const senaraiMarker = dapatkanSenaraiMarker();
+
+            badgeJumlah.textContent = `${senaraiMarker.length} ${bahasaSemasa === 'ms' ? 'Disimpan' : 'Saved'}`;
+            bekasUI.innerHTML = '';
+
+            if (senaraiMarker.length === 0) {
+                bekasUI.innerHTML = `<div class="text-center py-10 px-2 text-slate-500 text-xs">📌<br>Belum ada penanda.</div>`;
+                return;
+            }
+
+            senaraiMarker.forEach(m => {
+                const kad = document.createElement('div');
+                kad.className = "bg-slate-900/80 hover:bg-slate-700/60 p-2.5 rounded-xl border border-slate-700/60 transition cursor-pointer flex justify-between items-start gap-2";
+                kad.innerHTML = `
+                    <div class="flex-grow overflow-hidden" onclick="fokusKeMarker(${m.lat}, ${m.lng}, '${m.id}')">
+                        <p class="font-bold text-xs text-emerald-300 truncate">${m.nama}</p>
+                        <p class="text-[11px] text-slate-400 truncate">${m.catatan}</p>
+                        <span class="text-[9px] text-slate-500 font-mono">${m.lat.toFixed(3)}, ${m.lng.toFixed(3)}</span>
+                    </div>
+                    <button onclick="padamSatuMarker('${m.id}')" class="text-slate-500 hover:text-red-400 text-xs p-1">🗑️</button>
+                `;
+                bekasUI.appendChild(kad);
+            });
+        }
+
+        window.fokusKeMarker = function(lat, lng, markerId) {
+            map.flyTo([lat, lng], 14, { animate: true, duration: 1.2 });
+            const sasaran = kumpulanMarkerMap.find(m => m._customId === markerId);
+            if (sasaran) setTimeout(() => sasaran.openPopup(), 1200);
+        };
+
+        window.padamSatuMarker = function(id) {
+            if (confirm("Padam penanda ini?")) {
+                simpanSenaraiMarker(dapatkanSenaraiMarker().filter(m => m.id !== id));
+                lukisSemuaMarkerDariStorage();
+                map.closePopup();
+            }
+        };
+
+        function padamSemuaMarker() {
+            if (dapatkanSenaraiMarker().length === 0) return;
+            if (confirm("Padam SEMUA penanda lokasi?")) {
+                localStorage.removeItem(KUNCI_STORAGE_MARKER);
+                lukisSemuaMarkerDariStorage();
+            }
+        }
+
+        // --- H. GAYA PETA & CARIAN GEOCODING ---
+        function tukarGaya(jenis) {
+            const btnJalan = document.getElementById('btn-jalan');
+            const btnTopo = document.getElementById('btn-topografi');
+
+            if (jenis === 'jalan') {
+                if (map.hasLayer(gayaTopografi)) map.removeLayer(gayaTopografi);
+                if (gayaJalanan) gayaJalanan.addTo(map);
+                btnJalan.className = "px-3.5 py-2 bg-emerald-500 text-slate-950 font-bold text-xs rounded-lg shadow transition";
+                btnTopo.className = "px-3.5 py-2 bg-slate-700 text-slate-300 font-bold text-xs rounded-lg hover:bg-slate-600 transition";
+            } else {
+                if (gayaJalanan && map.hasLayer(gayaJalanan)) map.removeLayer(gayaJalanan);
+                gayaTopografi.addTo(map);
+                btnTopo.className = "px-3.5 py-2 bg-emerald-500 text-slate-950 font-bold text-xs rounded-lg shadow transition";
+                btnJalan.className = "px-3.5 py-2 bg-slate-700 text-slate-300 font-bold text-xs rounded-lg hover:bg-slate-600 transition";
+            }
+        }
+
+        async function cariLokasi(event) {
+            event.preventDefault();
+            const input = document.getElementById('input-carian').value;
+            const statusText = document.getElementById('status-carian');
+            if (!input.trim()) return;
+
+            statusText.textContent = "⏳ Sedang mencari koordinat...";
+            statusText.className = "text-xs text-emerald-400 px-1 block";
+
+            try {
+                const urlAPI = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(input)}&format=json&limit=1`;
+                const respon = await fetch(urlAPI, { headers: { 'Accept-Language': 'ms,en' } });
+                const data = await respon.json();
+
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+
+                    if (penandaCarian) map.removeLayer(penandaCarian);
+                    penandaCarian = L.marker([lat, lon]).addTo(map);
+                    penandaCarian.bindPopup(`
+                        <div class="p-1">
+                            <h4 class="font-bold text-emerald-400 text-xs">Hasil Carian:</h4>
+                            <p class="text-[11px] text-slate-300 mb-2">${data[0].display_name}</p>
+                            <button onclick="bukaBorangSimpanMarker(${lat}, ${lon})" class="w-full py-1 bg-emerald-500 text-slate-950 font-bold text-[11px] rounded">
+                                📌 Simpan Titik Ini
+                            </button>
+                        </div>
+                    `).openPopup();
+
+                    map.flyTo([lat, lon], 13, { animate: true, duration: 1.5 });
+                    statusText.textContent = `✅ Dijumpai: ${data[0].display_name}`;
+                } else {
+                    statusText.textContent = "❌ Lokasi tidak ditemui.";
+                    statusText.className = "text-xs text-red-400 px-1 block";
+                }
+            } catch (e) {
+                statusText.textContent = "⚠️ Ralat sambungan API.";
+                statusText.className = "text-xs text-red-400 px-1 block";
+            }
+        }
+
+        // --- I. EKSPORT & IMPORT DATA (GEOJSON / CSV) ---
+        function eksportGeoJSON() {
+            const senarai = dapatkanSenaraiMarker();
+            if (senarai.length === 0) { alert("Tiada penanda untuk dieksport!"); return; }
+
+            const geojsonData = {
+                type: "FeatureCollection",
+                features: senarai.map(m => ({
+                    type: "Feature",
+                    geometry: { type: "Point", coordinates: [m.lng, m.lat] },
+                    properties: { id: m.id, nama: m.nama, catatan: m.catatan, diciptaOleh: m.diciptaOleh }
+                }))
+            };
+            muatTurunFail(JSON.stringify(geojsonData, null, 2), `geojson_penanda_${Date.now()}.geojson`, 'application/geo+json');
+        }
+
+        function eksportCSV() {
+            const senarai = dapatkanSenaraiMarker();
+            if (senarai.length === 0) { alert("Tiada penanda untuk dieksport!"); return; }
+
+            const header = ["ID", "Nama Lokasi", "Catatan", "Latitud", "Longitud", "Dicipta Oleh"];
+            const rows = senarai.map(m => [
+                `"${m.id}"`, `"${m.nama.replace(/"/g, '""')}"`, `"${m.catatan.replace(/"/g, '""')}"`, m.lat, m.lng, `"${m.diciptaOleh}"`
+            ]);
+            const csvContent = "\uFEFF" + [header.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+            muatTurunFail(csvContent, `csv_penanda_${Date.now()}.csv`, 'text/csv;charset=utf-8;');
+        }
+
+        function muatTurunFail(kandungan, namaFail, jenisMime) {
+            const blob = new Blob([kandungan], { type: jenisMime });
+            const pautan = document.createElement('a');
+            pautan.href = URL.createObjectURL(blob);
+            pautan.download = namaFail;
+            document.body.appendChild(pautan);
+            pautan.click();
+            document.body.removeChild(pautan);
+            URL.revokeObjectURL(pautan.href);
+        }
+
+        function importGeoJSON(event) {
+            const fail = event.target.files[0];
+            if (!fail) return;
+
+            const pembaca = new FileReader();
+            pembaca.onload = function(e) {
+                try {
+                    const geojson = JSON.parse(e.target.result);
+                    if (geojson.type !== "FeatureCollection" || !Array.isArray(geojson.features)) {
+                        alert("Format GeoJSON tidak sah!"); return;
+                    }
+
+                    const senarai = dapatkanSenaraiMarker();
+                    let berjaya = 0;
+
+                    geojson.features.forEach(f => {
+                        if (f.geometry && f.geometry.type === "Point" && Array.isArray(f.geometry.coordinates)) {
+                            senarai.push({
+                                id: 'm_imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                                nama: (f.properties && f.properties.nama) || "Penanda Import",
+                                catatan: (f.properties && f.properties.catatan) || "Diimport",
+                                lat: parseFloat(f.geometry.coordinates[1]),
+                                lng: parseFloat(f.geometry.coordinates[0]),
+                                diciptaOleh: (f.properties && f.properties.diciptaOleh) || (penggunaSemasa ? penggunaSemasa.id : "Sistem")
+                            });
+                            berjaya++;
+                        }
+                    });
+
+                    if (berjaya > 0) {
+                        simpanSenaraiMarker(senarai);
+                        lukisSemuaMarkerDariStorage();
+                        alert(`🎉 Berjaya mengimport ${berjaya} penanda baharu!`);
+                    }
+                } catch (err) {
+                    alert("❌ Gagal membaca fail JSON.");
+                }
+                document.getElementById('input-import-geojson').value = "";
+            };
+            pembaca.readAsText(fail);
+        }
+
+        // Inisialisasi Bahasa Semasa Mula
+        setBahasa(bahasaSemasa);
+    </script>
+</body>
+</html>
